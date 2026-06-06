@@ -1,4 +1,4 @@
-### House of the Dead: Overkill Tweaks
+# House of the Dead: Overkill Tweaks
 
 ## Features
 
@@ -9,7 +9,7 @@
 - Includes fix for missing zombie torsos (no setting in the GUI to turn this on/off, it's automatically applied)
 - Also works for Typing of the Dead
 
-# Screenshots
+## Screenshots
 
 [![Comparison 1](https://raw.githubusercontent.com/JamesIV4/HotD-Tweaks/refs/heads/master/Screenshots/HotD%20Overkill%20Comparison%201.png)](<![docs/screenshots/combat-gnomish-mines.png](https://raw.githubusercontent.com/JamesIV4/HotD-Tweaks/refs/heads/master/Screenshots/HotD%20Overkill%20Comparison%201.png)>)
 
