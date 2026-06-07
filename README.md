@@ -1,7 +1,6 @@
-# HOTD Tweaks
+# House of the Dead: Overkill Tweaks
 
-HOTD Tweaks improves the PC versions of _The House of the Dead: Overkill_ and
-_Typing of the Dead: Overkill_.
+House of the Dead: Overkill Tweaks improves the PC versions of _The House of the Dead: Overkill_ and _Typing of the Dead: Overkill_.
 
 ## Features
 
@@ -14,17 +13,17 @@ _Typing of the Dead: Overkill_.
 
 ## Installation
 
-Place `HOTD_Tweaks.exe` in the game folder next to `HOTD_NG.exe`.
+Place `HotD-Tweaks.exe` in the game folder next to `HOTD_NG.exe`.
 
 ## Usage
 
 1. Close the game.
-2. Open `HOTD_Tweaks.exe`.
+2. Open `HotD-Tweaks.exe`.
 3. Choose your settings.
 4. Select **Apply Changes** and wait for it to finish.
 5. Launch either game mode through Steam.
 
-Do not close HOTD Tweaks while it is updating reticle files. Crosshair changes
+Do not close the app while it is updating reticle files. Crosshair changes
 take longer because several game files must be updated safely.
 
 ## Recommended Settings

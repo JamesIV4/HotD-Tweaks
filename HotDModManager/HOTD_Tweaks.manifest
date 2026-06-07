@@ -5,7 +5,7 @@
       processorArchitecture="x86"
       name="HOTD.Tweaks"
       type="win32"/>
-  <description>HOTD Tweaks</description>
+  <description>House of the Dead: Overkill Tweaks</description>
   <dependency>
     <dependentAssembly>
       <assemblyIdentity

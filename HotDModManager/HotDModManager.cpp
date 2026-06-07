@@ -39,6 +39,7 @@ constexpr int kDgVoodooD3D9Resource = 4001;
 constexpr int kCrosshairPatchResource = 4002;
 constexpr int kAppIconResource = 5000;
 constexpr int kMaxResolutionScale = 8;
+constexpr wchar_t kAppDisplayName[] = L"House of the Dead: Overkill Tweaks";
 constexpr size_t kAssetHeaderSize = 0x190;
 constexpr size_t kCompressedSizeOffset = 0x140;
 constexpr size_t kUncompressedSizeOffset = 0x144;
@@ -626,7 +627,7 @@ void AppendStatus(const std::wstring& line)
 
 void ShowError(const std::wstring& message)
 {
-    MessageBoxW(g_mainWindow, message.c_str(), L"HOTD Tweaks", MB_ICONERROR | MB_OK);
+    MessageBoxW(g_mainWindow, message.c_str(), kAppDisplayName, MB_ICONERROR | MB_OK);
     AppendStatus(L"ERROR: " + message);
 }
 
@@ -1596,7 +1597,7 @@ bool ApplyUiSettings()
     SetDirty(false);
     FinishApplyProgress(true);
     SetStatus(L"Changes applied successfully.\r\n"
-              L"Close HOTD Tweaks and launch either mode through Steam.");
+              L"Close the app and launch either mode through Steam.");
     return true;
 
 apply_failed:
@@ -1673,7 +1674,7 @@ void PaintWindow(HWND hwnd)
     SelectObject(dc, oldPen);
     DeleteObject(borderPen);
 
-    DrawTextLine(dc, L"HOTD Tweaks", 32, 22, g_titleFont, RGB(24, 32, 42));
+    DrawTextLine(dc, kAppDisplayName, 32, 22, g_titleFont, RGB(24, 32, 42));
     DrawTextLine(
         dc,
         L"Resolution and post-FX fixes for House of the Dead and Typing of the Dead",
@@ -1760,7 +1761,7 @@ bool ConfirmDiscardChanges()
     return MessageBoxW(
         g_mainWindow,
         L"Discard the unapplied setting changes?",
-        L"HOTD Tweaks",
+        kAppDisplayName,
         MB_ICONQUESTION | MB_YESNO) == IDYES;
 }
 
@@ -1819,7 +1820,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lpara
 
         g_reticleWarning = CreateWindowW(
             L"STATIC",
-            L"Do not close HOTD Tweaks while reticle files are being updated.",
+            L"Do not close House of the Dead: Overkill Tweaks while reticle files are being updated.",
             WS_CHILD | SS_LEFTNOWORDWRAP,
             52,
             594,
@@ -1967,7 +1968,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
                 MessageBoxW(
                     nullptr,
                     L"Close Typing of the Dead before changing the crosshair setting.",
-                    L"HOTD Tweaks",
+                    kAppDisplayName,
                     MB_ICONWARNING | MB_OK);
                 return 1;
             }
@@ -2013,7 +2014,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
     g_mainWindow = CreateWindowExW(
         WS_EX_APPWINDOW,
         className,
-        L"HOTD Tweaks",
+        kAppDisplayName,
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
         CW_USEDEFAULT,
         CW_USEDEFAULT,

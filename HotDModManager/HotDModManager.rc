@@ -8,8 +8,8 @@
 4002 RCDATA "HotDModManager\\crosshair_patches.bin"
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,5,0,0
- PRODUCTVERSION 1,5,0,0
+ FILEVERSION 1,7,0,0
+ PRODUCTVERSION 1,7,0,0
  FILEFLAGSMASK 0x3fL
  FILEFLAGS 0x0L
  FILEOS VOS__WINDOWS32
@@ -21,12 +21,12 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "CompanyName", "HOTD Tweaks Project"
-            VALUE "FileDescription", "The House of the Dead: Overkill tweaks manager"
-            VALUE "FileVersion", "1.5.0"
-            VALUE "InternalName", "HOTD_Tweaks"
-            VALUE "OriginalFilename", "HOTD_Tweaks.exe"
-            VALUE "ProductName", "HOTD Tweaks"
-            VALUE "ProductVersion", "1.5.0"
+            VALUE "FileDescription", "House of the Dead: Overkill Tweaks"
+            VALUE "FileVersion", "1.7.0"
+            VALUE "InternalName", "House of the Dead: Overkill Tweaks"
+            VALUE "OriginalFilename", "HotD-Tweaks.exe"
+            VALUE "ProductName", "House of the Dead: Overkill Tweaks"
+            VALUE "ProductVersion", "1.7.0"
         END
     END
     BLOCK "VarFileInfo"
