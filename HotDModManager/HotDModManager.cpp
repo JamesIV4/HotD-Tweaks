@@ -32,6 +32,7 @@ constexpr int IDC_STATUS = 108;
 constexpr int IDC_PROGRESS_TEXT = 109;
 constexpr int IDC_PROGRESS = 110;
 constexpr int IDC_TORSO_FIX = 111;
+constexpr int IDC_RETICLE_WARNING = 112;
 
 constexpr int kPostFxShimResource = 4000;
 constexpr int kDgVoodooD3D9Resource = 4001;
@@ -90,6 +91,7 @@ HWND g_refreshButton = nullptr;
 HWND g_openLogButton = nullptr;
 HWND g_progressText = nullptr;
 HWND g_progressBar = nullptr;
+HWND g_reticleWarning = nullptr;
 HFONT g_font = nullptr;
 HFONT g_titleFont = nullptr;
 HFONT g_subtitleFont = nullptr;
@@ -538,6 +540,16 @@ void SetInteractiveControlsEnabled(bool enabled)
     EnableWindow(g_applyButton, enabled && g_dirty);
 }
 
+void SetReticleWarningVisible(bool visible)
+{
+    if (!g_reticleWarning) {
+        return;
+    }
+    ShowWindow(g_reticleWarning, visible ? SW_SHOW : SW_HIDE);
+    InvalidateRect(g_reticleWarning, nullptr, TRUE);
+    PumpUiMessages();
+}
+
 void BeginApplyProgress(int maximum)
 {
     g_applyInProgress = true;
@@ -548,6 +560,7 @@ void BeginApplyProgress(int maximum)
     SendMessageW(g_progressBar, PBM_SETRANGE32, 0, g_progressMaximum);
     SendMessageW(g_progressBar, PBM_SETPOS, 0, 0);
     SetWindowTextW(g_progressText, g_progressStep.c_str());
+    SetReticleWarningVisible(false);
     SetInteractiveControlsEnabled(false);
     PumpUiMessages();
 }
@@ -591,6 +604,7 @@ void FinishApplyProgress(bool success)
     }
 
     g_applyInProgress = false;
+    SetReticleWarningVisible(false);
     SetInteractiveControlsEnabled(true);
     PumpUiMessages();
 }
@@ -1556,8 +1570,12 @@ bool ApplyUiSettings()
         }
         CompleteApplyProgressStep();
     }
-    if (crosshairChanged && !SetCrosshairVisible(desired.crosshairVisible)) {
-        goto apply_failed;
+    if (crosshairChanged) {
+        SetReticleWarningVisible(true);
+        if (!SetCrosshairVisible(desired.crosshairVisible)) {
+            goto apply_failed;
+        }
+        SetReticleWarningVisible(false);
     }
     if (postFxChanged) {
         SetApplyProgressStep(L"Updating the post-processing fix...");
@@ -1650,7 +1668,7 @@ void PaintWindow(HWND hwnd)
     HPEN oldPen = static_cast<HPEN>(SelectObject(dc, borderPen));
     HBRUSH oldBrush = static_cast<HBRUSH>(SelectObject(dc, g_cardBrush));
     RoundRect(dc, 28, 108, client.right - 28, 466, 16, 16);
-    RoundRect(dc, 28, 484, client.right - 28, 632, 16, 16);
+    RoundRect(dc, 28, 484, client.right - 28, 660, 16, 16);
     SelectObject(dc, oldBrush);
     SelectObject(dc, oldPen);
     DeleteObject(borderPen);
@@ -1799,22 +1817,36 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lpara
             reinterpret_cast<HMENU>(static_cast<intptr_t>(IDC_PROGRESS_TEXT)), nullptr, nullptr);
         SendMessageW(g_progressText, WM_SETFONT, reinterpret_cast<WPARAM>(g_subtitleFont), TRUE);
 
+        g_reticleWarning = CreateWindowW(
+            L"STATIC",
+            L"Do not close HOTD Tweaks while reticle files are being updated.",
+            WS_CHILD | SS_LEFTNOWORDWRAP,
+            52,
+            594,
+            statusWidth,
+            20,
+            hwnd,
+            reinterpret_cast<HMENU>(static_cast<intptr_t>(IDC_RETICLE_WARNING)),
+            nullptr,
+            nullptr);
+        SendMessageW(g_reticleWarning, WM_SETFONT, reinterpret_cast<WPARAM>(g_font), TRUE);
+
         g_progressBar = CreateWindowW(
             PROGRESS_CLASSW, L"", WS_CHILD | WS_VISIBLE | PBS_SMOOTH,
-            52, 596, statusWidth, 16, hwnd,
+            52, 624, statusWidth, 16, hwnd,
             reinterpret_cast<HMENU>(static_cast<intptr_t>(IDC_PROGRESS)), nullptr, nullptr);
         SendMessageW(g_progressBar, PBM_SETRANGE32, 0, 1);
         SendMessageW(g_progressBar, PBM_SETPOS, 0, 0);
         SetWindowTheme(g_progressBar, L"Explorer", nullptr);
 
-        g_refreshButton = AddButton(hwnd, IDC_REFRESH, L"Reload", 32, 648, 110, 40);
-        g_openLogButton = AddButton(hwnd, IDC_OPEN_LOG, L"Open Log", 154, 648, 120, 40);
+        g_refreshButton = AddButton(hwnd, IDC_REFRESH, L"Reload", 32, 676, 110, 40);
+        g_openLogButton = AddButton(hwnd, IDC_OPEN_LOG, L"Open Log", 154, 676, 120, 40);
         g_applyButton = AddButton(
             hwnd,
             IDC_APPLY,
             L"Apply Changes",
             client.right - 32 - 176,
-            648,
+            676,
             176,
             40,
             true);
@@ -1835,7 +1867,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lpara
 
     case WM_CTLCOLORSTATIC:
         SetBkMode(reinterpret_cast<HDC>(wparam), TRANSPARENT);
-        SetTextColor(reinterpret_cast<HDC>(wparam), RGB(91, 103, 117));
+        SetTextColor(
+            reinterpret_cast<HDC>(wparam),
+            reinterpret_cast<HWND>(lparam) == g_reticleWarning
+                ? RGB(185, 63, 45)
+                : RGB(91, 103, 117));
         return reinterpret_cast<LRESULT>(g_cardBrush);
 
     case WM_DRAWITEM:
@@ -1982,7 +2018,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
         CW_USEDEFAULT,
         CW_USEDEFAULT,
         884,
-        744,
+        772,
         nullptr,
         nullptr,
         instance,

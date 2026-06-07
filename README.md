@@ -1,22 +1,43 @@
-# House of the Dead: Overkill Tweaks
+# HOTD Tweaks
+
+HOTD Tweaks improves the PC versions of _The House of the Dead: Overkill_ and
+_Typing of the Dead: Overkill_.
 
 ## Features
 
-- Upscale the game's rendering resolution up to 8K, which is 6x the original fixed 720p internal resolution.
-- Fix broken cutscene post-processing effects that occur when the rendering resolution is upscaled.
-- Optionally disable the cutscene depth-of-field effect for a sharper image.
-- Enable or disable crosshairs for PC light guns such as Sinden and Retro Shooter.
-- Fix missing zombie torsos (optional in case it causes any issues on AMD graphics cards).
-- Also works with _Typing of the Dead: Overkill_.
+- Increase the internal 1280x720 rendering resolution from 1x to 8x.
+- Correct cutscene bloom and depth-of-field effects at increased resolutions.
+- Optionally disable cutscene depth of field.
+- Show or hide the in-game crosshair for light-gun setups.
+- Fix disappearing zombie torsos at increased resolutions.
+- Apply every setting from one simple app.
 
-The crosshair toggle uses a compact, reversible patch against the decompressed
-level data. It validates each known asset with SHA-256, changes only the
-reticule bytes, recompresses atomically, and restores the original files
-byte-for-byte when crosshairs are enabled again. The full replacement levels
-are not bundled.
+## Installation
+
+Place `HOTD_Tweaks.exe` in the game folder next to `HOTD_NG.exe`.
+
+## Usage
+
+1. Close the game.
+2. Open `HOTD_Tweaks.exe`.
+3. Choose your settings.
+4. Select **Apply Changes** and wait for it to finish.
+5. Launch either game mode through Steam.
+
+Do not close HOTD Tweaks while it is updating reticle files. Crosshair changes
+take longer because several game files must be updated safely.
+
+## Recommended Settings
+
+- Use the highest rendering multiplier your GPU can run smoothly.
+- Keep **Post-FX fix** on when using 2x resolution or higher.
+- Keep the **disappearing zombie torso fix** on unless it causes a compatibility
+  issue.
+- Set **in-game crosshair** to Hidden when using a light gun with its own aiming
+  system.
 
 ## Screenshots
 
-[![Comparison 1](https://raw.githubusercontent.com/JamesIV4/HotD-Tweaks/refs/heads/master/Screenshots/HotD%20Overkill%20Comparison%201.png)](<![docs/screenshots/combat-gnomish-mines.png](https://raw.githubusercontent.com/JamesIV4/HotD-Tweaks/refs/heads/master/Screenshots/HotD%20Overkill%20Comparison%201.png)>)
+![Comparison 1](https://raw.githubusercontent.com/JamesIV4/HotD-Tweaks/refs/heads/master/Screenshots/HotD%20Overkill%20Comparison%201.png)
 
-[![Comparison 2](https://raw.githubusercontent.com/JamesIV4/HotD-Tweaks/refs/heads/master/Screenshots/HotD%20Overkill%20Comparison%202.png)](![https://raw.githubusercontent.com/JamesIV4/HotD-Tweaks/refs/heads/master/Screenshots/HotD%20Overkill%20Comparison%202.png)
+![Comparison 2](https://raw.githubusercontent.com/JamesIV4/HotD-Tweaks/refs/heads/master/Screenshots/HotD%20Overkill%20Comparison%202.png)
