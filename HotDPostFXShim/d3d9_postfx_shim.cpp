@@ -37,7 +37,6 @@ enum FixKind {
 struct Config {
     bool enabled = true;
     bool disableCutsceneEffects = false;
-    bool hideCrosshair = false;
     bool log = true;
     bool adjustInvTex = false;
     bool adjustBufferOffset = false;
@@ -121,7 +120,6 @@ std::wstring g_iniPath;
 std::wstring g_logPath;
 Config g_config;
 bool g_configLoaded = false;
-bool g_gameHooksInstalled = false;
 
 std::mutex g_mutex;
 std::unordered_map<IDirect3DPixelShader9*, ShaderInfo> g_shaderInfo;
@@ -150,9 +148,6 @@ int g_cutsceneDofBypassLogs = 0;
 int g_cutsceneDofFixLogs = 0;
 bool g_cutsceneDofShaderResourceErrorLogged = false;
 thread_local bool g_internalConstantUpdate = false;
-
-using ReticuleParserProc = void (__thiscall*)(void*, void*);
-ReticuleParserProc g_realReticuleParser = nullptr;
 
 HRESULT STDMETHODCALLTYPE CreateDevice(
     IDirect3D9* self,
@@ -246,8 +241,6 @@ void LoadConfig()
     g_config.enabled = GetPrivateProfileIntW(L"PostFXFix", L"Enabled", 1, g_iniPath.c_str()) != 0;
     g_config.disableCutsceneEffects =
         GetPrivateProfileIntW(L"PostFXFix", L"DisableCutsceneEffects", 0, g_iniPath.c_str()) != 0;
-    g_config.hideCrosshair =
-        GetPrivateProfileIntW(L"PostFXFix", L"HideCrosshair", 0, g_iniPath.c_str()) != 0;
     g_config.log = GetPrivateProfileIntW(L"PostFXFix", L"Log", 1, g_iniPath.c_str()) != 0;
     g_config.adjustInvTex = GetPrivateProfileIntW(L"PostFXFix", L"AdjustInvTex", 0, g_iniPath.c_str()) != 0;
     g_config.adjustBufferOffset = GetPrivateProfileIntW(L"PostFXFix", L"AdjustBufferOffset", 0, g_iniPath.c_str()) != 0;
@@ -292,18 +285,6 @@ void LoadConfig()
     g_configLoaded = true;
 }
 
-void __fastcall ParseReticuleCommand(void* self, void*, void* stream)
-{
-    if (!g_realReticuleParser) {
-        return;
-    }
-
-    g_realReticuleParser(self, stream);
-    if (g_config.hideCrosshair && self) {
-        *reinterpret_cast<DWORD*>(static_cast<unsigned char*>(self) + 0x3c) = 0;
-    }
-}
-
 void Log(const char* format, ...)
 {
     LoadConfig();
@@ -344,43 +325,6 @@ HMODULE LoadRealD3D9()
     g_loadAttempted = true;
     LoadConfig();
 
-    if (!g_gameHooksInstalled) {
-        g_gameHooksInstalled = true;
-
-        // HOTD_NG.exe 2015-02-13: CFHudToggleReticule vtable slot 3 is the
-        // command parser. Hooking this class-specific slot avoids changing the
-        // shared boolean parser used by unrelated game commands.
-        wchar_t processPath[MAX_PATH] = {};
-        GetModuleFileNameW(nullptr, processPath, ARRAYSIZE(processPath));
-        const wchar_t* processName = wcsrchr(processPath, L'\\');
-        processName = processName ? processName + 1 : processPath;
-
-        HMODULE game = GetModuleHandleW(nullptr);
-        if (game && _wcsicmp(processName, L"HOTD_NG.exe") == 0) {
-            auto* base = reinterpret_cast<unsigned char*>(game);
-            void** vtable = reinterpret_cast<void**>(base + 0x3f1ef0);
-            void* expectedParser = base + 0x1bcb40;
-            void* expectedName = base + 0x0a1570;
-
-            if (vtable[3] == expectedParser && vtable[8] == expectedName) {
-                DWORD oldProtect = 0;
-                if (VirtualProtect(&vtable[3], sizeof(void*), PAGE_READWRITE, &oldProtect)) {
-                    g_realReticuleParser = reinterpret_cast<ReticuleParserProc>(vtable[3]);
-                    vtable[3] = reinterpret_cast<void*>(&ParseReticuleCommand);
-                    DWORD ignored = 0;
-                    VirtualProtect(&vtable[3], sizeof(void*), oldProtect, &ignored);
-                    Log("Installed CFHudToggleReticule parser hook. HideCrosshair=%d",
-                        g_config.hideCrosshair ? 1 : 0);
-                } else {
-                    Log("ERROR: could not make CFHudToggleReticule vtable writable. GetLastError=%lu",
-                        GetLastError());
-                }
-            } else {
-                Log("ERROR: CFHudToggleReticule signature mismatch; runtime crosshair hook not installed");
-            }
-        }
-    }
-
     const std::wstring dir = GetModuleDirectory();
     const std::wstring backendPath = dir + L"dgVoodooBackend\\D3D9.dll";
     const std::wstring fallbackPath = dir + L"dgVoodoo_D3D9.dll";
@@ -394,11 +338,10 @@ HMODULE LoadRealD3D9()
     if (!g_realD3D9) {
         Log("ERROR: failed to load backend D3D9 from %ls. GetLastError=%lu", path.c_str(), GetLastError());
     } else {
-        Log("Loaded backend D3D9 from %ls. Enabled=%d DisableCutsceneEffects=%d HideCrosshair=%d Scale=%.3f BloomRadiusDivisor=%.3f BloomIntensity=%.3f BloomOffsetXTexels=%.4f DofRadiusDivisor=%.3f DofBlurOffset=(%.4f,%.4f) DofMaskOffset=(%.4f,%.4f) DofStrength=%.3f ShaderHooks=%d AdjustInvTex=%d AdjustBufferOffset=%d",
+        Log("Loaded backend D3D9 from %ls. Enabled=%d DisableCutsceneEffects=%d Scale=%.3f BloomRadiusDivisor=%.3f BloomIntensity=%.3f BloomOffsetXTexels=%.4f DofRadiusDivisor=%.3f DofBlurOffset=(%.4f,%.4f) DofMaskOffset=(%.4f,%.4f) DofStrength=%.3f ShaderHooks=%d AdjustInvTex=%d AdjustBufferOffset=%d",
             path.c_str(),
             g_config.enabled ? 1 : 0,
             g_config.disableCutsceneEffects ? 1 : 0,
-            g_config.hideCrosshair ? 1 : 0,
             g_config.scale,
             g_config.bloomRadiusDivisor,
             g_config.cutsceneBloomIntensity,
