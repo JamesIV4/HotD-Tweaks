@@ -34,8 +34,6 @@ constexpr int IDC_PROGRESS = 110;
 constexpr int IDC_TORSO_FIX = 111;
 constexpr int IDC_RETICLE_WARNING = 112;
 
-constexpr int kPostFxShimResource = 4000;
-constexpr int kDgVoodooD3D9Resource = 4001;
 constexpr int kCrosshairPatchResource = 4002;
 constexpr int kDgVoodooConfigResource = 4003;
 constexpr int kAppIconResource = 5000;
@@ -1149,13 +1147,15 @@ bool EnsurePostFxBackend()
     const std::wstring backendDll = JoinPath(backendDir, L"D3D9.dll");
     if (!FileExists(backendDll)) {
         const std::wstring renamed = RootFile(L"dgVoodoo_D3D9.dll");
-        if (!FileExists(renamed)) {
-            if (!WriteResourceToFile(kDgVoodooD3D9Resource, backendDll)) {
-                ShowError(L"Missing dgVoodoo_D3D9.dll and could not extract bundled dgVoodoo backend.");
-                return false;
-            }
-        } else if (!CopyFileChecked(renamed, backendDll, true)) {
+        if (FileExists(renamed) &&
+            !CopyFileChecked(renamed, backendDll, true)) {
             ShowError(L"Could not copy dgVoodoo_D3D9.dll into dgVoodooBackend.");
+            return false;
+        }
+        if (!FileExists(backendDll)) {
+            ShowError(
+                L"The dgVoodoo backend is missing. Re-extract the complete "
+                L"HotD Tweaks release into the game folder.");
             return false;
         }
     }
@@ -1182,14 +1182,21 @@ bool InstallPostFxShim()
         return false;
     }
 
+    const std::wstring target = RootFile(L"D3D9.dll");
+    if (FileExists(target)) {
+        return true;
+    }
+
     const std::wstring source = JoinPath(JoinPath(g_gameDir, L"HotDPostFXShim"), L"D3D9.dll");
     if (FileExists(source)) {
-        if (!CopyFileChecked(source, RootFile(L"D3D9.dll"), true)) {
+        if (!CopyFileChecked(source, target, true)) {
             ShowError(L"Could not install the post-FX D3D9 shim.");
             return false;
         }
-    } else if (!WriteResourceToFile(kPostFxShimResource, RootFile(L"D3D9.dll"))) {
-        ShowError(L"Could not install the post-FX D3D9 shim.");
+    } else {
+        ShowError(
+            L"The post-FX D3D9 shim is missing. Re-extract the complete "
+            L"HotD Tweaks release into the game folder.");
         return false;
     }
 

@@ -13,7 +13,9 @@ House of the Dead: Overkill Tweaks improves the PC versions of _The House of the
 
 ## Installation
 
-Place `HotD-Tweaks.exe` in the game folder next to `HOTD_NG.exe`.
+[Download the latest release ZIP](https://github.com/JamesIV4/HotD-Tweaks/releases/latest) and extract its full contents directly into the game's
+directory, next to `HOTD_NG.exe`. Copying only `HotD-Tweaks.exe` is not a
+complete installation.
 
 ## Usage
 

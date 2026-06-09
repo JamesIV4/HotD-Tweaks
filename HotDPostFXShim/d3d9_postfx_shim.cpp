@@ -250,7 +250,7 @@ void LoadConfig()
     g_config.patchOnDraw = GetPrivateProfileIntW(L"PostFXFix", L"PatchOnDraw", 1, g_iniPath.c_str()) != 0;
     g_config.logFullscreenDraws = GetPrivateProfileIntW(L"PostFXFix", L"LogFullscreenDraws", 1, g_iniPath.c_str()) != 0;
     g_config.patchFullscreenSmallConstants = GetPrivateProfileIntW(L"PostFXFix", L"PatchFullscreenSmallConstants", 1, g_iniPath.c_str()) != 0;
-    g_config.scale = ReadIniFloat(L"PostFXFix", L"Scale", 3.0f);
+    g_config.scale = ReadIniFloat(L"PostFXFix", L"Scale", 1.0f);
     g_config.bloomRadiusDivisor = ReadIniFloat(L"PostFXFix", L"BloomRadiusDivisor", 0.0f);
     g_config.cutsceneBloomIntensity =
         ReadIniFloat(L"PostFXFix", L"CutsceneBloomIntensity", 0.666667f);
@@ -275,7 +275,7 @@ void LoadConfig()
     g_config.maxFullscreenDrawLogs = GetPrivateProfileIntW(L"PostFXFix", L"MaxFullscreenDrawLogs", 400, g_iniPath.c_str());
 
     if (g_config.scale <= 0.01f) {
-        g_config.scale = 3.0f;
+        g_config.scale = 1.0f;
     }
     g_config.cutsceneBloomIntensity =
         std::max(0.0f, std::min(2.0f, g_config.cutsceneBloomIntensity));

@@ -3,8 +3,6 @@
 1 RT_MANIFEST "HotDModManager\\HOTD_Tweaks.manifest"
 5000 ICON "HotDModManager\\HOTD_Tweaks.ico"
 
-4000 RCDATA "HotDPostFXShim\\D3D9.dll"
-4001 RCDATA "dgVoodooBackend\\D3D9.dll"
 4002 RCDATA "HotDModManager\\crosshair_patches.bin"
 4003 RCDATA "dgVoodooBackend\\dgVoodoo.conf"
 
