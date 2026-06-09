@@ -37,6 +37,7 @@ constexpr int IDC_RETICLE_WARNING = 112;
 constexpr int kPostFxShimResource = 4000;
 constexpr int kDgVoodooD3D9Resource = 4001;
 constexpr int kCrosshairPatchResource = 4002;
+constexpr int kDgVoodooConfigResource = 4003;
 constexpr int kAppIconResource = 5000;
 constexpr int kMaxResolutionScale = 8;
 constexpr wchar_t kAppDisplayName[] = L"House of the Dead: Overkill Tweaks";
@@ -107,7 +108,7 @@ int g_progressMaximum = 1;
 std::wstring g_progressStep;
 
 struct Settings {
-    int resolutionScale = 0;
+    int resolutionScale = 1;
     bool crosshairVisible = true;
     bool postFxEnabled = true;
     bool cutsceneDofEnabled = true;
@@ -211,23 +212,27 @@ std::wstring ScaleLabel(int scale)
 
 int CurrentResolutionScale()
 {
-    return ParseResolutionScale(ReadIniString(RootFile(L"dgVoodoo.conf"), L"DirectX", L"Resolution", L""));
+    const int scale = ParseResolutionScale(
+        ReadIniString(
+            RootFile(L"dgVoodoo.conf"),
+            L"DirectX",
+            L"Resolution",
+            L"unforced"));
+    return scale >= 1 ? scale : 1;
 }
 
 int SelectedResolutionScale()
 {
     if (!g_resolutionCombo) {
-        const int current = CurrentResolutionScale();
-        return current > 0 ? current : 3;
+        return CurrentResolutionScale();
     }
 
     const LRESULT selected = SendMessageW(g_resolutionCombo, CB_GETCURSEL, 0, 0);
-    if (selected >= 0 && selected <= kMaxResolutionScale) {
-        return static_cast<int>(selected);
+    if (selected >= 0 && selected < kMaxResolutionScale) {
+        return static_cast<int>(selected) + 1;
     }
 
-    const int current = CurrentResolutionScale();
-    return current > 0 ? current : 3;
+    return CurrentResolutionScale();
 }
 
 void SyncResolutionCombo()
@@ -240,7 +245,7 @@ void SyncResolutionCombo()
     SendMessageW(
         g_resolutionCombo,
         CB_SETCURSEL,
-        scale >= 1 && scale <= kMaxResolutionScale ? scale : 0,
+        scale >= 1 && scale <= kMaxResolutionScale ? scale - 1 : 0,
         0);
 }
 
@@ -1157,7 +1162,13 @@ bool EnsurePostFxBackend()
 
     const std::wstring rootConf = RootFile(L"dgVoodoo.conf");
     const std::wstring backendConf = JoinPath(backendDir, L"dgVoodoo.conf");
-    if (FileExists(rootConf) && !CopyFileChecked(rootConf, backendConf, true)) {
+    if (!FileExists(rootConf) &&
+        !WriteResourceToFile(kDgVoodooConfigResource, rootConf)) {
+        ShowError(L"Could not extract the bundled dgVoodoo configuration.");
+        return false;
+    }
+    if (!FileExists(backendConf) &&
+        !CopyFileChecked(rootConf, backendConf, false)) {
         ShowError(L"Could not copy dgVoodoo.conf into dgVoodooBackend.");
         return false;
     }
@@ -1199,16 +1210,21 @@ bool ApplyCompatibilitySettings(bool torsoFixEnabled)
         }
 
         wroteAny = true;
-        RemoveDgVoodooString(conf, L"DirectX", L"AdapterIDType");
-        RemoveDgVoodooString(conf, L"DirectX", L"EnumeratedResolutionBitdepths");
-        RemoveDgVoodooString(conf, L"DirectX", L"RTTexturesForceScaleAndMSAA");
-        SetDgVoodooString(conf, L"DirectXExt", L"AdapterIDType", L"nvidia");
-        SetDgVoodooString(conf, L"DirectXExt", L"EnumeratedResolutionBitdepths", L"all");
-        SetDgVoodooString(
-            conf,
-            L"DirectXExt",
-            L"RTTexturesForceScaleAndMSAA",
-            torsoFixEnabled ? L"true" : L"false");
+        const bool updated =
+            RemoveDgVoodooString(conf, L"DirectX", L"AdapterIDType") &&
+            RemoveDgVoodooString(conf, L"DirectX", L"EnumeratedResolutionBitdepths") &&
+            RemoveDgVoodooString(conf, L"DirectX", L"RTTexturesForceScaleAndMSAA") &&
+            SetDgVoodooString(conf, L"DirectXExt", L"AdapterIDType", L"nvidia") &&
+            SetDgVoodooString(conf, L"DirectXExt", L"EnumeratedResolutionBitdepths", L"all") &&
+            SetDgVoodooString(
+                conf,
+                L"DirectXExt",
+                L"RTTexturesForceScaleAndMSAA",
+                torsoFixEnabled ? L"true" : L"false");
+        if (!updated) {
+            ShowError(L"Could not update dgVoodoo compatibility settings in " + conf);
+            return false;
+        }
     }
     return wroteAny;
 }
@@ -1283,12 +1299,13 @@ bool SetCutsceneEffectsEnabled(bool enabled)
 
 bool SetResolutionFix(int scale)
 {
-    const bool enabled = scale > 0;
-    if (enabled && !EnsurePostFxBackend()) {
+    const int selectedScale =
+        std::max(1, std::min(scale, kMaxResolutionScale));
+    const bool forced = selectedScale > 1;
+    if (!EnsurePostFxBackend()) {
         return false;
     }
 
-    const int selectedScale = enabled ? scale : 1;
     const std::wstring resolutionValue = ScaleIniValue(selectedScale);
     const std::wstring postFxScale = ScaleFloatValue(selectedScale);
 
@@ -1304,15 +1321,21 @@ bool SetResolutionFix(int scale)
 
         SetDgVoodooString(conf, L"GeneralExt", L"FullscreenAttributes", L"fake");
         SetDgVoodooString(conf, L"GeneralExt", L"WatermarkDisplayDuration", L"0");
-        SetDgVoodooString(conf, L"DirectX", L"Resolution", enabled ? resolutionValue.c_str() : L"unforced");
+        SetDgVoodooString(
+            conf,
+            L"DirectX",
+            L"Resolution",
+            forced ? resolutionValue.c_str() : L"unforced");
         SetDgVoodooString(conf, L"DirectX", L"dgVoodooWatermark", L"false");
         SetDgVoodooString(conf, L"Debug", L"Info", L"disable");
     }
     const std::wstring postFxIni = RootFile(L"HotDPostFXFix.ini");
-    WriteIniString(postFxIni, L"PostFXFix", L"Scale", enabled ? postFxScale.c_str() : L"1.0");
+    WriteIniString(postFxIni, L"PostFXFix", L"Scale", postFxScale.c_str());
 
-    AppendStatus(enabled ? L"Resolution fix ON: dgVoodoo DirectX Resolution = " + ScaleLabel(selectedScale) + L"." :
-                           L"Resolution fix OFF: dgVoodoo DirectX Resolution = unforced.");
+    AppendStatus(
+        forced
+            ? L"Rendering resolution set to " + ScaleLabel(selectedScale) + L"."
+            : L"Rendering resolution set to 1x (dgVoodoo resolution unforced).");
     return true;
 }
 
@@ -1322,10 +1345,10 @@ std::wstring ResolutionState()
     const std::wstring value = ReadIniString(conf, L"DirectX", L"Resolution", L"missing");
     const int scale = ParseResolutionScale(value);
     if (scale > 0) {
-        return L"ON / " + ScaleLabel(scale);
+        return ScaleLabel(scale);
     }
     if (value == L"unforced") {
-        return L"OFF / unforced";
+        return L"1x (unforced)";
     }
     return L"custom / " + value;
 }
@@ -1333,7 +1356,7 @@ std::wstring ResolutionState()
 std::wstring PostFxState()
 {
     const std::wstring ini = RootFile(L"HotDPostFXFix.ini");
-    const std::wstring value = ReadIniString(ini, L"PostFXFix", L"Enabled", L"0");
+    const std::wstring value = ReadIniString(ini, L"PostFXFix", L"Enabled", L"1");
     return value == L"1" ? L"ON" : L"OFF";
 }
 
@@ -1378,7 +1401,7 @@ void RefreshStatus()
     std::wstring status = IsGameRunning() ? L"Game is running. Close it before applying changes." :
                                             L"Ready. Changes are applied only when you press Apply Changes.";
     status += L"\r\nInstalled: ";
-    status += scale > 0 ? std::to_wstring(scale) + L"x" : L"resolution off";
+    status += std::to_wstring(scale) + L"x";
     status += L" | crosshair " + crosshairState;
     status += postFxEnabled ? L" | FX on" : L" | FX off";
     status += cutsceneDofEnabled ? L" | DoF on" : L" | DoF off";
@@ -1417,7 +1440,7 @@ Settings ReadUiSettings()
 {
     Settings settings;
     settings.resolutionScale =
-        static_cast<int>(SendMessageW(g_resolutionCombo, CB_GETCURSEL, 0, 0));
+        static_cast<int>(SendMessageW(g_resolutionCombo, CB_GETCURSEL, 0, 0)) + 1;
     settings.crosshairVisible =
         SendMessageW(g_crosshairCombo, CB_GETCURSEL, 0, 0) == 0;
     settings.postFxEnabled =
@@ -1438,6 +1461,16 @@ bool SettingsEqual(const Settings& left, const Settings& right)
         left.torsoFixEnabled == right.torsoFixEnabled;
 }
 
+bool HasInstalledRuntimeState()
+{
+    const std::wstring backendDir = JoinPath(g_gameDir, L"dgVoodooBackend");
+    return FileExists(RootFile(L"D3D9.dll")) &&
+        FileExists(RootFile(L"dgVoodoo.conf")) &&
+        FileExists(RootFile(L"HotDPostFXFix.ini")) &&
+        FileExists(JoinPath(backendDir, L"D3D9.dll")) &&
+        FileExists(JoinPath(backendDir, L"dgVoodoo.conf"));
+}
+
 void UpdateCutsceneDofLabel()
 {
     if (!g_resolutionCombo || !g_postFxCombo || !g_cutsceneDofCombo) {
@@ -1445,7 +1478,7 @@ void UpdateCutsceneDofLabel()
     }
 
     const int resolutionScale =
-        static_cast<int>(SendMessageW(g_resolutionCombo, CB_GETCURSEL, 0, 0));
+        static_cast<int>(SendMessageW(g_resolutionCombo, CB_GETCURSEL, 0, 0)) + 1;
     const bool postFxEnabled =
         SendMessageW(g_postFxCombo, CB_GETCURSEL, 0, 0) == 0;
     const int dofSelection =
@@ -1496,7 +1529,9 @@ void SetDirty(bool dirty)
 void UpdateDirtyState()
 {
     if (!g_loadingUi) {
-        SetDirty(!SettingsEqual(ReadUiSettings(), g_appliedSettings));
+        SetDirty(
+            !HasInstalledRuntimeState() ||
+            !SettingsEqual(ReadUiSettings(), g_appliedSettings));
     }
 }
 
@@ -1504,14 +1539,18 @@ void LoadSettingsIntoUi()
 {
     g_loadingUi = true;
     g_appliedSettings = ReadSettings();
-    SendMessageW(g_resolutionCombo, CB_SETCURSEL, g_appliedSettings.resolutionScale, 0);
+    SendMessageW(
+        g_resolutionCombo,
+        CB_SETCURSEL,
+        g_appliedSettings.resolutionScale - 1,
+        0);
     SendMessageW(g_crosshairCombo, CB_SETCURSEL, g_appliedSettings.crosshairVisible ? 0 : 1, 0);
     SendMessageW(g_postFxCombo, CB_SETCURSEL, g_appliedSettings.postFxEnabled ? 0 : 1, 0);
     SendMessageW(g_cutsceneDofCombo, CB_SETCURSEL, g_appliedSettings.cutsceneDofEnabled ? 0 : 1, 0);
     SendMessageW(g_torsoFixCombo, CB_SETCURSEL, g_appliedSettings.torsoFixEnabled ? 0 : 1, 0);
     UpdateCutsceneDofLabel();
     g_loadingUi = false;
-    SetDirty(false);
+    SetDirty(!HasInstalledRuntimeState());
     RefreshStatus();
 }
 
@@ -1522,22 +1561,16 @@ bool ApplyUiSettings()
     }
 
     const Settings desired = ReadUiSettings();
-    const bool resolutionChanged =
-        desired.resolutionScale != g_appliedSettings.resolutionScale;
     const bool crosshairChanged =
         desired.crosshairVisible != g_appliedSettings.crosshairVisible;
-    const bool postFxChanged =
-        desired.postFxEnabled != g_appliedSettings.postFxEnabled;
     const bool cutsceneDofChanged =
         desired.cutsceneDofEnabled != g_appliedSettings.cutsceneDofEnabled;
     const bool torsoFixChanged =
         desired.torsoFixEnabled != g_appliedSettings.torsoFixEnabled;
-    int progressSteps = 3;
-    progressSteps += resolutionChanged ? 1 : 0;
+    int progressSteps = 5;
     progressSteps += crosshairChanged
         ? static_cast<int>(ARRAYSIZE(kCrosshairAssets)) + 1
         : 0;
-    progressSteps += postFxChanged ? 1 : 0;
     progressSteps += cutsceneDofChanged ? 1 : 0;
 
     SetStatus(L"Applying changes...");
@@ -1564,13 +1597,11 @@ bool ApplyUiSettings()
     }
     CompleteApplyProgressStep();
 
-    if (resolutionChanged) {
-        SetApplyProgressStep(L"Updating the rendering resolution...");
-        if (!SetResolutionFix(desired.resolutionScale)) {
-            goto apply_failed;
-        }
-        CompleteApplyProgressStep();
+    SetApplyProgressStep(L"Updating the rendering resolution...");
+    if (!SetResolutionFix(desired.resolutionScale)) {
+        goto apply_failed;
     }
+    CompleteApplyProgressStep();
     if (crosshairChanged) {
         SetReticleWarningVisible(true);
         if (!SetCrosshairVisible(desired.crosshairVisible)) {
@@ -1578,13 +1609,11 @@ bool ApplyUiSettings()
         }
         SetReticleWarningVisible(false);
     }
-    if (postFxChanged) {
-        SetApplyProgressStep(L"Updating the post-processing fix...");
-        if (!SetPostFxEnabled(desired.postFxEnabled)) {
-            goto apply_failed;
-        }
-        CompleteApplyProgressStep();
+    SetApplyProgressStep(L"Updating the post-processing fix...");
+    if (!SetPostFxEnabled(desired.postFxEnabled)) {
+        goto apply_failed;
     }
+    CompleteApplyProgressStep();
     if (cutsceneDofChanged) {
         SetApplyProgressStep(L"Updating cutscene depth of field...");
         if (!SetCutsceneEffectsEnabled(desired.cutsceneDofEnabled)) {
@@ -1791,7 +1820,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lpara
         const int statusWidth = client.right - 104;
 
         g_resolutionCombo = AddCombo(hwnd, IDC_RESOLUTION, comboX, 127, comboWidth);
-        SendMessageW(g_resolutionCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Off"));
         for (int scale = 1; scale <= kMaxResolutionScale; ++scale) {
             const std::wstring label = ScaleLabel(scale);
             SendMessageW(g_resolutionCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(label.c_str()));
@@ -1852,9 +1880,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lpara
             40,
             true);
 
-        if (!IsGameRunning()) {
-            ApplyCompatibilitySettings(TorsoFixState());
-        }
         LoadSettingsIntoUi();
         return 0;
     }

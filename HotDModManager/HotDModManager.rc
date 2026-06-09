@@ -6,6 +6,7 @@
 4000 RCDATA "HotDPostFXShim\\D3D9.dll"
 4001 RCDATA "dgVoodooBackend\\D3D9.dll"
 4002 RCDATA "HotDModManager\\crosshair_patches.bin"
+4003 RCDATA "dgVoodooBackend\\dgVoodoo.conf"
 
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION 1,7,0,0
