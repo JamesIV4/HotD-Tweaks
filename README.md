@@ -8,7 +8,7 @@ House of the Dead: Overkill Tweaks improves the PC versions of _The House of the
 - Correct cutscene bloom and depth-of-field effects at increased resolutions.
 - Optionally disable cutscene depth of field.
 - Show or hide the in-game crosshair for light-gun setups.
-- Fix disappearing zombie torsos at increased resolutions.
+- Fix disappearing zombie torsos.
 - Apply every setting from one simple app.
 
 ## Installation
